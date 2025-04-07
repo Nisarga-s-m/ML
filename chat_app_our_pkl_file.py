@@ -1,9 +1,8 @@
 import streamlit as st
 import pickle
-import os
 
-
-@st.cache_resource  # Cache the model to avoid reloading on each interaction
+# Load models
+@st.cache_resource
 def load_models():
     with open("logistic_model.pkl", "rb") as f:
         logistic_model = pickle.load(f)
@@ -13,65 +12,54 @@ def load_models():
 
 logistic_model, nb_model = load_models()
 
-# Custom CSS for UI
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap');
-    body { font-family: 'Roboto', sans-serif; }
-    .chat-container { max-width: 600px; margin: auto; }
-    .user-msg { background-color: #DCF8C6; text-align: right; padding: 12px; border-radius: 12px; margin: 5px 0; float: right; clear: both; max-width: 70%; }
-    .bot-msg { background-color: #E5E5EA; text-align: left; padding: 12px; border-radius: 12px; margin: 5px 0; float: left; clear: both; max-width: 70%; }
-    .sentiment-box { display: block; padding: 6px; border-radius: 6px; font-weight: bold; margin: 10px auto; max-width: 200px; text-align: center; }
-    .positive { background-color: #D4EDDA; color: #155724; }
-    .neutral { background-color: #FFF3CD; color: #856404; }
-    .negative { background-color: #F8D7DA; color: #721C24; }
-    .clear { clear: both; }
-    </style>
-""", unsafe_allow_html=True)
+# Preprocessing function (same as your training code)
+import re
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+import nltk
 
-st.title("💬 WhatsApp-Style Customer Support")
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+stop_words = set(stopwords.words('english')) - {'not', 'no', 'never'}
+lemmatizer = WordNetLemmatizer()
 
-st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+def preprocess_text(text):
+    text = re.sub(r'<.*?>|[^a-zA-Z\s]', '', str(text).lower())
+    tokens = word_tokenize(text)
+    tokens = [lemmatizer.lemmatize(token) for token in tokens if token not in stop_words]
+    return ' '.join(tokens)
 
-# Display chat history
-for msg in st.session_state.messages:
-    css_class = "user-msg" if msg["role"] == "user" else "bot-msg"
-    st.markdown(f'<div class="{css_class}">{msg["content"]}</div><div class="clear"></div>', unsafe_allow_html=True)
+# Streamlit UI
+st.title("🗣️ WhatsApp-Style Sentiment Analysis")
 
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Get user input
+model_choice = st.selectbox("Choose a model", ["Logistic Regression", "Naive Bayes"])
 user_input = st.chat_input("Type your message here...")
 
 if user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-
-    # Display user message
     st.markdown(f'<div class="user-msg">{user_input}</div><div class="clear"></div>', unsafe_allow_html=True)
-
-    # === Sentiment Analysis Using Your Model ===
-    user_input_tfidf = vectorizer.transform([user_input])  # Convert input to TF-IDF features
-    sentiment_prediction = model.predict(user_input_tfidf)[0]  # Predict sentiment
-
-    # Sentiment Mapping
-    sentiment_map = {0: "Negative", 1: "Neutral", 2: "Positive"}  # Adjust based on your model labels
-    sentiment_text = sentiment_map.get(sentiment_prediction, "Neutral")  # Default to Neutral if unknown
-
-    sentiment_emojis = {"Positive": "🟢😊", "Neutral": "🟡😐", "Negative": "🔴😠"}
-    sentiment_classes = {"Positive": "positive", "Neutral": "neutral", "Negative": "negative"}
     
-    sentiment_emoji = sentiment_emojis.get(sentiment_text, "⚪🤖")
-    sentiment_class = sentiment_classes.get(sentiment_text, "neutral")
+    cleaned_input = preprocess_text(user_input)
+    
+    if model_choice == "Logistic Regression":
+        prediction = logistic_model.predict([cleaned_input])[0]
+    else:
+        prediction = nb_model.predict([cleaned_input])[0]
 
-    # Display sentiment result
-    st.markdown(f'<div class="sentiment-box {sentiment_class}">{sentiment_emoji} {sentiment_text}</div>', unsafe_allow_html=True)
+    sentiment_emojis = {"positive": "🟢😊", "neutral": "🟡😐", "negative": "🔴😠"}
+    sentiment_classes = {"positive": "positive", "neutral": "neutral", "negative": "negative"}
 
-    # === Simulated AI Response (Optional) ===
-    bot_reply = "Thank you for reaching out! How can I assist you further?"
-    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+    emoji = sentiment_emojis.get(prediction, "⚪🤖")
+    style_class = sentiment_classes.get(prediction, "neutral")
 
-    # Display AI response
+    st.markdown(f"""
+        <div class="sentiment-box {style_class}">
+            {emoji} {prediction.capitalize()}
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Bot reply
+    bot_reply = "Thanks! Let me know if you need anything else."
     st.markdown(f'<div class="bot-msg">{bot_reply}</div><div class="clear"></div>', unsafe_allow_html=True)
