@@ -1,7 +1,7 @@
 import streamlit as st
 import pickle
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer
+
 
 # Load saved model & vectorizer
 @st.cache_resource  # Cache the model to avoid reloading on each interaction
