@@ -3,16 +3,15 @@ import pickle
 import os
 
 
-# Load saved model & vectorizer
 @st.cache_resource  # Cache the model to avoid reloading on each interaction
-def load_model():
-    with open("logistic_model.pkl", "rb") as model_file:
-        model = pickle.load(model_file)
-    with open("naivebayes.pkl", "rb") as vectorizer_file:
-        vectorizer = pickle.load(vectorizer_file)
-    return model, vectorizer
+def load_models():
+    with open("logistic_model.pkl", "rb") as f:
+        logistic_model = pickle.load(f)
+    with open("naivebayes_model.pkl", "rb") as f:
+        nb_model = pickle.load(f)
+    return logistic_model, nb_model
 
-model, vectorizer = load_model()
+logistic_model, nb_model = load_models()
 
 # Custom CSS for UI
 st.markdown("""
